@@ -78,10 +78,26 @@ impl<T> List<T> {
   // we declare a fresh lifetime here for the *exact* borrow that
   // creates the Iter. Now &self needs to be valid as long as the
   // Iter is around
-  pub fn iter<'a>(&'a self) -> Iter<'a, T> {
+  pub fn iter(& self) -> Iter<T> {
       Iter { next: self.head.as_deref() }
   }
 }
+
+// Same as:
+// impl<T> List<T> {
+//   pub fn iter<'a>(&'a self) -> Iter<'a, T> {
+//     Iter { next: self.head.as_deref() }
+// }
+// }
+
+// or if not comfortable hiding that a struct contains a lifetime, you can use the
+// "explicitly elided lifetime syntax `_`"
+// impl<T> List<T> {
+//   pub fn iter(&self) -> Iter<'_, T> {
+//       Iter { next: self.head.as_deref() }
+//   }
+// }
+
 // We *do* have a lifetime here, because Iter has one that we need to define
 impl<'a, T> Iterator for Iter<'a, T> {
   // need it here too, this is a type declaration
