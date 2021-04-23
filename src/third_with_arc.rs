@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 // One reason to use an immutable linked list is to share data across threads. After all, shared mutable state is the root of all evil, and one way to solve that is to kill the mutable part forever.
 
@@ -32,7 +32,7 @@ pub struct List<T> {
   head: Link<T>,
 }
 
-type Link<T> = Option<Rc<Node<T>>>;
+type Link<T> = Option<Arc<Node<T>>>;
 
 struct Node<T> {
   elem: T,
@@ -45,7 +45,7 @@ impl<T> List<T> {
   }
 
   pub fn append(&self, elem: T) -> List<T> {
-    List { head: Some(Rc::new(Node {
+    List { head: Some(Arc::new(Node {
       elem: elem,
       next: self.head.clone()
     }))}
@@ -68,7 +68,7 @@ impl<T> Drop for List<T> {
   fn drop(&mut self) {
     let mut head = self.head.take();
     while let Some(node) = head {
-      if let Ok(mut node) = Rc::try_unwrap(node) {
+      if let Ok(mut node) = Arc::try_unwrap(node) {
         head = node.next.take();
       } else {
         break;
