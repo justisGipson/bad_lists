@@ -35,9 +35,11 @@
 // One key observation is that we're wasting a ton of work doing the same thing over and over. Can we memoize this
 // work? Why, yes! We can store a pointer to the end of the list, and just jump straight to there!
 
+use std::ptr;
+
 pub struct List<T> {
   head: Link<T>,
-  tail: Option<&'a mut Node<T>>, // NEW!
+  tail: *mut Node<T> // DANGER ZONE
 }
 
 type Link<T> = Option<Box<Node<T>>>;
@@ -47,30 +49,86 @@ struct Node<T> {
   next: Link<T>
 }
 
-impl<T> List<T> {
+impl<'a, T> List<T> {
   pub fn new() -> Self {
-    List { head: None, tail: None}
+    List { head: None, tail: ptr::null_mut()}
   }
 
-  pub fn push(&mut self, elem: T) {
-    let new_tail = Box::new(Node {
+  pub fn push(&'a mut self, elem: T) {
+    let mut new_tail = Box::new(Node {
       elem: elem,
       // when you push onto the tail, your next is ALWAYS None
       next: None,
     });
 
     // swap old_tail to point to new_tail
-    let new_tail = match self.tail.take() {
-      Some(mut old_tail) => {
-        // if old_tail existed, update to point to new_tail
-        old_tail.next = Some(new_tail);
-        old_tail.next.as_deref_mut()
+    let raw_tail: *mut _ = &mut *new_tail;
+
+    if !self.tail.is_null() {
+      // if the old tail existed, update to point to new_tail
+      unsafe {
+        (*self.tail).next = Some(new_tail);
       }
-      None => {
-        self.head = Some(new_tail);
-        self.head.as_deref_mut()
+    } else {
+      // otherwise update head to point to it
+      self.head = Some(new_tail);
+    }
+    self.tail = raw_tail;
+  }
+
+  pub fn pop(& mut self) -> Option<T> {
+    // grab the lists current head
+    self.head.take().map(|head| {
+      let head = *head;
+      self.head = head.next;
+
+      // if we're out of 'head', make sure to set the tail to None
+      if self.head.is_none() {
+        self.tail = ptr::null_mut();
       }
-    };
-    self.tail = new_tail;
+      head.elem
+    })
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::List;
+
+  #[test]
+  fn basics() {
+    let mut list = List::new();
+    // empty list behavior check
+    assert_eq!(list.pop(), None);
+
+    // populate list
+    list.push(1);
+    list.push(2);
+    list.push(3);
+
+    // check normal removal
+    assert_eq!(list.pop(), Some(1));
+    assert_eq!(list.pop(), Some(2));
+
+    // push more just to make sure nothing's corrupted
+    list.push(4);
+    list.push(5);
+
+    // check normal removal
+    assert_eq!(list.pop(), Some(3));
+    assert_eq!(list.pop(), Some(4));
+
+    // check exhaustion
+    assert_eq!(list.pop(), Some(5));
+    assert_eq!(list.pop(), None);
+
+    // check the exhaustion case fixed the pointer
+    list.push(6);
+    list.push(7);
+
+    // check normal removal
+    assert_eq!(list.pop(), Some(6));
+    assert_eq!(list.pop(), Some(7));
+    assert_eq!(list.pop(), None);
   }
 }
