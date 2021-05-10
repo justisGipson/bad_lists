@@ -142,9 +142,31 @@ mod test {
 
   #[test]
   fn walk_aboot() {
-    let mut list = List::new();           // [_]
+    let mut list = List::new();               // [_]
 
-    list.push_left(0);                    // [0,_]
-    list.push_right(1);                   // [0,_1]
+    list.push_left(0);                        // [0,_]
+    list.push_right(1);                       // [0,_1]
+    assert_eq!(list.peek_left(), Some(&0));
+    assert_eq!(list.peek_right(), Some(&1));
+
+    list.push_left(2);                        // [0, 2, _, 1]
+    list.push_left(3);                        // [0, 2, 3, _, 1]
+    list.push_right(4);                       // [0, 2, 3, _, 4, 1]
+
+    while list.go_left() {}                   // [_, 0, 2, 3, 4, 1]
+
+    assert_eq!(list.pop_left(), None);
+    assert_eq!(list.pop_right(), Some(0));    // [_, 2, 3, 4, 1]
+    assert_eq!(list.pop_right(), Some(2));    // [_, 3, 4, 1]
+
+    list.push_left(5);                        // [5, _, 3, 4, 1]
+
+    assert_eq!(list.pop_right(), Some(3));    // [5, _, 4, 1]
+    assert_eq!(list.pop_left(), Some(5));     // [_, 4, 1]
+    assert_eq!(list.pop_right(), Some(4));    // [_, 1]
+    assert_eq!(list.pop_right(), Some(1));    // [_]
+
+    assert_eq!(list.pop_right(), None);
+    assert_eq!(list.pop_left(), None);
   }
 }
