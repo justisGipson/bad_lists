@@ -135,3 +135,16 @@ impl<T> Drop for Stack<T> {
     }
   }
 }
+
+#[cfg(test)]
+mod test {
+  use super::List;
+
+  #[test]
+  fn walk_aboot() {
+    let mut list = List::new();           // [_]
+
+    list.push_left(0);                    // [0,_]
+    list.push_right(1);                   // [0,_1]
+  }
+}
